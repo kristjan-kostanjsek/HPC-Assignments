@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.tmpl": "html",
+        "stdio.h": "c"
+    }
+}
