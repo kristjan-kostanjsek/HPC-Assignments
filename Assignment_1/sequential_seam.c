@@ -74,7 +74,7 @@ void cummulative_energy(int width, int height, float **energy_map) {
     }
 }
 
-void find_cheapest_path(int width, int height, float **energy_map) {
+void find_cheapest_path(int width, int height, float **energy_map, int *seam) {
     // Find the min value in the last row of energy_map
     int min_x = 0;
     float min_value = energy_map[height-1][0];
@@ -84,25 +84,25 @@ void find_cheapest_path(int width, int height, float **energy_map) {
             min_x = x;
         }
     }
-    // Mark the seam with -1 values
-    energy_map[height-1][min_x] = -1;
+    // Store the positions in the seam array
+    seam[height - 1] = min_x;
     for (int y = height - 2; y >= 0; y--) {
         int best_x = min_x; // Directly above
         if (min_x > 0 && energy_map[y][min_x - 1] < energy_map[y][best_x]) // Top left
             best_x = min_x - 1;
         if (min_x < width - 1 && energy_map[y][min_x + 1] < energy_map[y][best_x]) // Top right
             best_x = min_x + 1;
-        energy_map[y][best_x] = -1;
+        seam[y] = best_x;
     }
 }
 
 // copies the input image to output image without the seam
-void remove_seam_copy(unsigned char *image_in, unsigned char *image_out, int width, int height, int cpp, float **energy_map) {
+void remove_seam_copy(unsigned char *image_in, unsigned char *image_out, int width, int height, int cpp, int *seam) {
     int in_index = 0;
     int out_index = 0;
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            if (energy_map[y][x] == -1) {
+            if (x == seam[y]) {
                 in_index += cpp;
                 continue; // Skip the seam pixel
             }
@@ -143,9 +143,10 @@ int main(int argc, char *argv[]) {
     // 1. COMPUTING ENERGY FOR EVERY PIXEL
 
     // Allocate memory for the 2D energy map
+    float *energy_data = (float *)malloc(height * width * sizeof(float));
     float **energy_map = (float **)malloc(height * sizeof(float *));
     for (int i = 0; i < height; i++) {
-        energy_map[i] = (float *)malloc(width * sizeof(float));
+        energy_map[i] = &energy_data[i * width];  // Point each row pointer to the correct offset
     }
 
     // Compute energy map
@@ -156,15 +157,16 @@ int main(int argc, char *argv[]) {
     // Calculate the cummulative energy for the energy map
     cummulative_energy(width, height, energy_map);
 
-    // Find the cheapest path in the cummulative energy map and mark it with -1s
-    find_cheapest_path(width, height, energy_map);
+    int *seam = (int *)malloc(height * sizeof(int));
+    // Find the cheapest path in the cummulative energy map and store it in the seam array
+    find_cheapest_path(width, height, energy_map, seam);
 
     // 3. REMOVE SEAM FROM IMAGE (Copy the image to new image, without the seam)
     
     const size_t datasize = width * height * cpp * sizeof(unsigned char);
     unsigned char *image_out = (unsigned char *)malloc(datasize);
 
-    remove_seam_copy(image_in, image_out, width, height, cpp, energy_map);
+    remove_seam_copy(image_in, image_out, width, height, cpp, seam);
 
     // Save the image
     if (!stbi_write_png(image_out_name, width - 1, height, cpp, image_out, (width - 1) * cpp)) {
