@@ -9,6 +9,9 @@
 // Use 0 to retain the original number of color channels
 #define COLOR_CHANNELS 0
 
+// Number of seams removed from the image
+#define REPETITIONS 128 // TODO change number of repetitions here
+
 // Sobel operator kernels
 int Gx[3][3] = {
     {-1, 0, 1},
@@ -64,10 +67,10 @@ void compute_energy(unsigned char *image_in, int width, int height, int cpp, flo
 void cummulative_energy(int width, int height, float **energy_map) {
     for (int y = 1; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            float previous_min = energy_map[y - 1][0]; // Directly above
+            float previous_min = energy_map[y - 1][x]; // Directly above
             if (x > 0)
                 fmin(previous_min, energy_map[y - 1][x - 1]);  // Top-left
-            if (x < width - 1)
+            if (x < width)
                 fmin(previous_min, energy_map[y - 1][x + 1]);  // Top-right
             energy_map[y][x] += previous_min;
         }
@@ -129,7 +132,7 @@ int main(int argc, char *argv[]) {
     snprintf(image_in_name, 255, "%s", argv[1]);
     snprintf(image_out_name, 255, "%s", argv[2]);
 
-    // Load image from file and allocate space for the output image
+    // Load image from file
     int width, height, cpp;
     unsigned char *image_in = stbi_load(image_in_name, &width, &height, &cpp, COLOR_CHANNELS);
 
@@ -140,8 +143,6 @@ int main(int argc, char *argv[]) {
     }
     printf("Loaded image %s of size %dx%d.\n", image_in_name, width, height);
 
-    // 1. COMPUTING ENERGY FOR EVERY PIXEL
-
     // Allocate memory for the 2D energy map
     float *energy_data = (float *)malloc(height * width * sizeof(float));
     float **energy_map = (float **)malloc(height * sizeof(float *));
@@ -149,27 +150,41 @@ int main(int argc, char *argv[]) {
         energy_map[i] = &energy_data[i * width];  // Point each row pointer to the correct offset
     }
 
-    // Compute energy map
-    compute_energy(image_in, width, height, cpp, energy_map);
-
-    // 2. IDENTIFYING THE VERTICAL SEAM
-
-    // Calculate the cummulative energy for the energy map
-    cummulative_energy(width, height, energy_map);
-
-    int *seam = (int *)malloc(height * sizeof(int));
-    // Find the cheapest path in the cummulative energy map and store it in the seam array
-    find_cheapest_path(width, height, energy_map, seam);
-
-    // 3. REMOVE SEAM FROM IMAGE (Copy the image to new image, without the seam)
-    
+    // Allocate space for the output image
     const size_t datasize = width * height * cpp * sizeof(unsigned char);
     unsigned char *image_out = (unsigned char *)malloc(datasize);
 
-    remove_seam_copy(image_in, image_out, width, height, cpp, seam);
+    // SEAM CARVING ALGORITHM
+    for (int rep = 0; rep < REPETITIONS; rep++) {
+
+        // 1. COMPUTING ENERGY FOR EVERY PIXEL
+
+        // Compute energy map
+        compute_energy(image_in, width - rep, height, cpp, energy_map);
+
+        // 2. IDENTIFYING THE VERTICAL SEAM
+
+        // Calculate the cummulative energy for the energy map
+        cummulative_energy(width - rep, height, energy_map);
+
+        int *seam = (int *)malloc(height * sizeof(int));
+
+        // Find the cheapest path in the cummulative energy map and store it in the seam array
+        find_cheapest_path(width - rep, height, energy_map, seam);
+
+        // 3. REMOVE SEAM FROM IMAGE (Copy the image to new image, without the seam)
+        remove_seam_copy(image_in, image_out, width - rep, height, cpp, seam);
+
+        if (rep != REPETITIONS - 1) {
+            // output image becomes new input image and vice versa (swap image_in and image_out)
+            unsigned char *temp = image_out;
+            image_out = image_in;
+            image_in = temp;
+        }
+    }
 
     // Save the image
-    if (!stbi_write_png(image_out_name, width - 1, height, cpp, image_out, (width - 1) * cpp)) {
+    if (!stbi_write_png(image_out_name, width - REPETITIONS, height, cpp, image_out, (width - REPETITIONS) * cpp)) {
         printf("Error saving image to %s\n", image_out_name);
         exit(EXIT_FAILURE);
     }
