@@ -1,5 +1,8 @@
+// gcc -o sequential_seam sequential_seam.c -lm -fopenmp -O2
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <omp.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -120,6 +123,9 @@ void remove_seam_copy(unsigned char *image_in, unsigned char *image_out, int wid
 
 int main(int argc, char *argv[]) {
 
+    // Starting time of the algorithm
+    double start_time = omp_get_wtime();
+
     // Too few arguments
     if (argc < 3) {
         printf("USAGE: sample input_image output_image\n");
@@ -175,6 +181,8 @@ int main(int argc, char *argv[]) {
         // 3. REMOVE SEAM FROM IMAGE (Copy the image to new image, without the seam)
         remove_seam_copy(image_in, image_out, width - rep, height, cpp, seam);
 
+        free(seam); // release the memory for seam array
+
         if (rep != REPETITIONS - 1) {
             // output image becomes new input image and vice versa (swap image_in and image_out)
             unsigned char *temp = image_out;
@@ -193,6 +201,12 @@ int main(int argc, char *argv[]) {
     free(image_in);
     free(image_out);
     free(energy_map);
+
+    // End time of the algorithm
+    double end_time = omp_get_wtime();
+
+    // Print out the ammount of time needed
+    printf("Time needed: %f s\n",end_time-start_time);
 
     return 0;
 }

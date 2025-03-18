@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "*.tmpl": "html",
-        "stb_image.h": "c"
+        "stb_image.h": "c",
+        "stb_image_write.h": "c",
+        "stdio.h": "c"
     }
 }
