@@ -123,12 +123,9 @@ void remove_seam_copy(unsigned char *image_in, unsigned char *image_out, int wid
 
 int main(int argc, char *argv[]) {
 
-    // Starting time of the algorithm
-    double start_time = omp_get_wtime();
-
     // Too few arguments
     if (argc < 3) {
-        printf("USAGE: sample input_image output_image\n");
+        printf("USAGE: sequential_basic_seam input_image output_image\n");
         exit(EXIT_FAILURE);
     }
 
@@ -149,6 +146,9 @@ int main(int argc, char *argv[]) {
     }
     printf("Loaded image %s of size %dx%d.\n", image_in_name, width, height);
 
+    // Starting time of the algorithm
+    double start_time = omp_get_wtime();
+
     // Allocate memory for the 2D energy map
     float *energy_data = (float *)malloc(height * width * sizeof(float));
     float **energy_map = (float **)malloc(height * sizeof(float *));
@@ -159,6 +159,9 @@ int main(int argc, char *argv[]) {
     // Allocate space for the output image
     const size_t datasize = width * height * cpp * sizeof(unsigned char);
     unsigned char *image_out = (unsigned char *)malloc(datasize);
+
+    // Allocate space for seam array
+    int *seam = (int *)malloc(height * sizeof(int));
 
     // SEAM CARVING ALGORITHM
     for (int rep = 0; rep < REPETITIONS; rep++) {
@@ -173,15 +176,11 @@ int main(int argc, char *argv[]) {
         // Calculate the cummulative energy for the energy map
         cummulative_energy(width - rep, height, energy_map);
 
-        int *seam = (int *)malloc(height * sizeof(int));
-
         // Find the cheapest path in the cummulative energy map and store it in the seam array
         find_cheapest_path(width - rep, height, energy_map, seam);
 
         // 3. REMOVE SEAM FROM IMAGE (Copy the image to new image, without the seam)
         remove_seam_copy(image_in, image_out, width - rep, height, cpp, seam);
-
-        free(seam); // release the memory for seam array
 
         if (rep != REPETITIONS - 1) {
             // output image becomes new input image and vice versa (swap image_in and image_out)
@@ -190,6 +189,8 @@ int main(int argc, char *argv[]) {
             image_in = temp;
         }
     }
+    // End time of the algorithm
+    double end_time = omp_get_wtime();
 
     // Save the image
     if (!stbi_write_png(image_out_name, width - REPETITIONS, height, cpp, image_out, (width - REPETITIONS) * cpp)) {
@@ -201,9 +202,7 @@ int main(int argc, char *argv[]) {
     free(image_in);
     free(image_out);
     free(energy_map);
-
-    // End time of the algorithm
-    double end_time = omp_get_wtime();
+    free(seam);
 
     // Print out the ammount of time needed
     printf("Time needed: %f s\n",end_time-start_time);

@@ -3,6 +3,7 @@
         "*.tmpl": "html",
         "stb_image.h": "c",
         "stb_image_write.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "stdlib.h": "c"
     }
 }
