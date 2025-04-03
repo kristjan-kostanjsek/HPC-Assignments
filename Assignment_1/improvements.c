@@ -164,8 +164,8 @@ void find_cheapest_path(int width, int height, float **energy_map, int *seam) {
     }
 }
 
-bool* imp_find_cheapest_path(int width, int height, float **energy_map) {
-    int num_strips = omp_get_max_threads(); // Number of strips = number of threads
+bool* imp_find_cheapest_path(int width, int height, float **energy_map, int num_threads) {
+    int num_strips = num_threads; // Number of strips = number of threads
     int strip_width = width / num_strips;   // Width of each strip
 
     bool *seam_mask = (bool *)calloc(width * height, sizeof(bool));
@@ -224,10 +224,10 @@ void remove_seam_copy(unsigned char *image_in, unsigned char *image_out, int wid
     }
 }
 
-void imp_remove_seam_copy(unsigned char *image_in, unsigned char *image_out, int width, int height, int cpp, bool *seam_mask) {
+void imp_remove_seam_copy(unsigned char *image_in, unsigned char *image_out, int width, int height, int cpp, bool *seam_mask, int num_threads) {
     // Copy the input image to the output image, skipping the marked pixels
     //#pragma omp parallel for // parallel for each row
-    int num_strips = omp_get_max_threads(); // Number of strips = number of threads
+    int num_strips = num_threads; // Number of strips = number of threads
     int strip_width = width / num_strips;   // Width of each strip
 
     #pragma omp parallel for // parallelize the strips
@@ -344,10 +344,10 @@ int main(int argc, char *argv[]) {
         imp_cummulative_energy(width - rep, height, energy_map);
 
         // Find the cheapest path in the cummulative energy map and store it in the seam array
-        bool* seam_mask = imp_find_cheapest_path(width - rep, height, energy_map);
+        bool* seam_mask = imp_find_cheapest_path(width - rep, height, energy_map, num_threads);
 
         // 3. REMOVE SEAM FROM IMAGE (Copy the image to new image, without the seam)
-        imp_remove_seam_copy(image_in, image_out, width - rep, height, cpp, seam_mask);
+        imp_remove_seam_copy(image_in, image_out, width - rep, height, cpp, seam_mask, num_threads);
 
         if (rep != REPETITIONS - 1) {
             // output image becomes new input image and vice versa (swap image_in and image_out)
