@@ -31,19 +31,6 @@ void RGB_to_YUV(unsigned char *image, int width, int height, int cpp) {
     }
 }
 
-void YUV_to_RGB(unsigned char *image, int width, int height, int cpp) {
-    for (int i = 0; i < width * height; i++) {
-        unsigned char Y = image[i * cpp + 0];
-        unsigned char U = image[i * cpp + 1];
-        unsigned char V = image[i * cpp + 2];
-
-        // formula from the instructions + clamping values to valid range (0-255)
-        image[i * cpp + 0] = fmax(0.0f, fmin(255.0f, Y + 1.402f * (V - 128.0f)));
-        image[i * cpp + 1] = fmax(0.0f, fmin(255.0f, Y - 0.344136f * (U - 128.0f) - 0.714136f * (V - 128.0f)));
-        image[i * cpp + 2] = fmax(0.0f, fmin(255.0f, Y + 1.772f * (U - 128.0f)));
-    }
-}
-
 void compute_luminance_histogram(unsigned char *image, int width, int height, int cpp, int *lum_hist, int offset) {
     for (int i = 0; i < width * height; i++) {
         int l = (int)roundf(image[i * cpp + offset]); 
@@ -51,23 +38,23 @@ void compute_luminance_histogram(unsigned char *image, int width, int height, in
     }
 }
 
-void compute_cumulative_histogram(int *lum_hist, int *cum_hist) {
+int compute_cumulative_histogram(int *lum_hist, int *cum_hist) {
+    int min_luminance = 0;
     cum_hist[0] = lum_hist[0];
     for (int i = 1; i < 256; i++) {
         cum_hist[i] = cum_hist[i - 1] + lum_hist[i];
-    }
-}
 
-void compute_new_luminance(int *cum_hist, int *new_lum, int width, int height) {
-    int min_luminance = 0;
-    // Find the minimum non-zero luminance value in the histogram
-    for (int i = 0; i < 256; i++) {
-        if (cum_hist[i] > 0) {
-            min_luminance = cum_hist[i];
-            break;
+        // Find the minimum non-zero luminance value in the histogram
+        if (cum_hist[i-1] > 0 && min_luminance == 0) {
+            min_luminance = cum_hist[i-1];
         }
     }
 
+    return min_luminance; // return the minimum luminance value
+
+}
+
+void compute_new_luminance(int *cum_hist, int *new_lum, int width, int height, int min_luminance) {
     // Compute the new luminance values based on the cumulative histogram
     for (int lum = 0; lum < 256; lum++) {
         int cum_lum = cum_hist[lum];
@@ -79,10 +66,20 @@ void compute_new_luminance(int *cum_hist, int *new_lum, int width, int height) {
     }
 }
 
-void assign_new_luminance(unsigned char *image, int width, int height, int cpp, int *new_lum) {
+void assign_new_lum_convert_YUV_to_RGB(unsigned char *image, int width, int height, int cpp, int *new_lum) {
     for (int i = 0; i < width * height; i++) {
         int l = (int)roundf(image[i * cpp]); // luminance value of the pixel currently
         image[i * cpp] = new_lum[l]; // use old luminance value as index to get new luminance value
+
+        // convert YUV back to RGB
+        unsigned char Y = image[i * cpp + 0];
+        unsigned char U = image[i * cpp + 1];
+        unsigned char V = image[i * cpp + 2];
+
+        // formula from the instructions + clamping values to valid range (0-255)
+        image[i * cpp + 0] = fmax(0.0f, fmin(255.0f, Y + 1.402f * (V - 128.0f)));
+        image[i * cpp + 1] = fmax(0.0f, fmin(255.0f, Y - 0.344136f * (U - 128.0f) - 0.714136f * (V - 128.0f)));
+        image[i * cpp + 2] = fmax(0.0f, fmin(255.0f, Y + 1.772f * (U - 128.0f)));
     }
 }
 
@@ -132,9 +129,11 @@ int main(int argc, char *argv[]) {
 
     int *R_hist = (int *)calloc(256, sizeof(int));
     int *new_R_hist = (int *)calloc(256, sizeof(int));
-    
-    compute_luminance_histogram(image, width, height, cpp, R_hist, 0);
-    util_print_hist_for_plot(R_hist); // Just for testing, can be deleted
+    int min_lum = 0;
+
+    // print old R histogram for plotting
+    //compute_luminance_histogram(image, width, height, cpp, R_hist, 0); // to change to G or B, change offset to 1 or 2
+    //util_print_hist_for_plot(R_hist); // Just for testing, can be deleted
 
     // start timer
     double start_time = omp_get_wtime();
@@ -146,23 +145,21 @@ int main(int argc, char *argv[]) {
     compute_luminance_histogram(image, width, height, cpp, lum_hist, 0);
     
     // 3. compute cumulative histogram
-    compute_cumulative_histogram(lum_hist, cum_hist);
+    min_lum = compute_cumulative_histogram(lum_hist, cum_hist);
     //util_print_histogram(cum_hist); // Just for testing, can be deleted
 
     // 4. calculate new pixel luminances
-    compute_new_luminance(cum_hist, new_lum, width, height);
+    compute_new_luminance(cum_hist, new_lum, width, height, min_lum);
 
-    // 5. assign new luminances to each pixel
-    assign_new_luminance(image, width, height, cpp, new_lum);
-
-    // 6. convert image back to RGB
-    YUV_to_RGB(image, width, height, cpp);
+    // 5. assign new luminances to each pixel and convert back to RGB
+    assign_new_lum_convert_YUV_to_RGB(image, width, height, cpp, new_lum);
 
     // stop timer
     double end_time = omp_get_wtime();
 
-    compute_luminance_histogram(image, width, height, cpp, new_R_hist, 0);
-    util_print_hist_for_plot(new_R_hist); // Just for testing, can be deleted
+    // print new R histogram for plotting
+    //compute_luminance_histogram(image, width, height, cpp, new_R_hist, 0);
+    //util_print_hist_for_plot(new_R_hist); // Just for testing, can be deleted
 
     // Save the image
     if (!stbi_write_png(image_out_name, width, height, cpp, image, width * cpp)) {
