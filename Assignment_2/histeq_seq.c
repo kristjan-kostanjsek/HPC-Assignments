@@ -44,11 +44,62 @@ void YUV_to_RGB(unsigned char *image, int width, int height, int cpp) {
     }
 }
 
-void compute_luminance_histogram(unsigned char *image, int width, int height, int cpp, int *lum_hist) {
+void compute_luminance_histogram(unsigned char *image, int width, int height, int cpp, int *lum_hist, int offset) {
     for (int i = 0; i < width * height; i++) {
-        int l = (int)roundf(image[i * cpp]);
+        int l = (int)roundf(image[i * cpp + offset]); 
         lum_hist[l]++;
     }
+}
+
+void compute_cumulative_histogram(int *lum_hist, int *cum_hist) {
+    cum_hist[0] = lum_hist[0];
+    for (int i = 1; i < 256; i++) {
+        cum_hist[i] = cum_hist[i - 1] + lum_hist[i];
+    }
+}
+
+void compute_new_luminance(int *cum_hist, int *new_lum, int width, int height) {
+    int min_luminance = 0;
+    // Find the minimum non-zero luminance value in the histogram
+    for (int i = 0; i < 256; i++) {
+        if (cum_hist[i] > 0) {
+            min_luminance = cum_hist[i];
+            break;
+        }
+    }
+
+    // Compute the new luminance values based on the cumulative histogram
+    for (int lum = 0; lum < 256; lum++) {
+        int cum_lum = cum_hist[lum];
+        int up = cum_lum - min_luminance;
+        int down = (width * height) - min_luminance;
+        float division = (float)up/down; // the (float) is necessary to avoid integer division
+        int new_luminance = floorf(division * 255);
+        new_lum[lum] = new_luminance;
+    }
+}
+
+void assign_new_luminance(unsigned char *image, int width, int height, int cpp, int *new_lum) {
+    for (int i = 0; i < width * height; i++) {
+        int l = (int)roundf(image[i * cpp]); // luminance value of the pixel currently
+        image[i * cpp] = new_lum[l]; // use old luminance value as index to get new luminance value
+    }
+}
+
+void util_print_histogram(int *hist) { // Just for testing, can be deleted
+    printf("Bin  | Count\n");
+    printf("-----|-------\n");
+    for (int l = 0; l < 256; l++) {
+        printf("%3d  | %d\n", l, hist[l]);
+    }
+}
+
+void util_print_hist_for_plot(int *hist) { // Just for testing, can be deleted
+    printf("[");
+    for (int l = 0; l < 256; l++) {
+        printf("%d, ", hist[l]);
+    }
+    printf("]\n\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -74,10 +125,17 @@ int main(int argc, char *argv[]) {
     }
     printf("Loaded image %s of size %dx%d.\n", image_in_name, width, height);
 
-    // (c)allocate space for luminance histogram, cumulative histogram
+    // (c)allocate space for luminance histogram, cumulative histogram and array for new luminance values
     int *lum_hist = (int *)calloc(256, sizeof(int));
     int *cum_hist = (int *)calloc(256, sizeof(int));
+    int *new_lum = (int *)calloc(256, sizeof(int));
+
+    int *R_hist = (int *)calloc(256, sizeof(int));
+    int *new_R_hist = (int *)calloc(256, sizeof(int));
     
+    compute_luminance_histogram(image, width, height, cpp, R_hist, 0);
+    util_print_hist_for_plot(R_hist); // Just for testing, can be deleted
+
     // start timer
     double start_time = omp_get_wtime();
 
@@ -85,22 +143,26 @@ int main(int argc, char *argv[]) {
     RGB_to_YUV(image, width, height, cpp);
 
     // 2. compute luminance histogram
-    compute_luminance_histogram(image, width, height, cpp, lum_hist);
-
+    compute_luminance_histogram(image, width, height, cpp, lum_hist, 0);
+    
     // 3. compute cumulative histogram
-    // TODO
+    compute_cumulative_histogram(lum_hist, cum_hist);
+    //util_print_histogram(cum_hist); // Just for testing, can be deleted
 
     // 4. calculate new pixel luminances
-    // TODO
+    compute_new_luminance(cum_hist, new_lum, width, height);
 
     // 5. assign new luminances to each pixel
-    // TODO
+    assign_new_luminance(image, width, height, cpp, new_lum);
 
     // 6. convert image back to RGB
     YUV_to_RGB(image, width, height, cpp);
 
     // stop timer
     double end_time = omp_get_wtime();
+
+    compute_luminance_histogram(image, width, height, cpp, new_R_hist, 0);
+    util_print_hist_for_plot(new_R_hist); // Just for testing, can be deleted
 
     // Save the image
     if (!stbi_write_png(image_out_name, width, height, cpp, image, width * cpp)) {
