@@ -18,8 +18,9 @@ void print_histogram(int *hist) { // Just for testing, can be deleted
     }
 }
 
-void RGB_to_YUV(unsigned char *image, int width, int height, int cpp) {
+void RGB_to_YUV_compute_luminance_histogram(unsigned char *image, int width, int height, int cpp, int *lum_hist, int offset) {
     for (int i = 0; i < width * height; i++) {
+        // convert RGB to YUV
         unsigned char R = image[i * cpp + 0];
         unsigned char G = image[i * cpp + 1];
         unsigned char B = image[i * cpp + 2];
@@ -28,11 +29,8 @@ void RGB_to_YUV(unsigned char *image, int width, int height, int cpp) {
         image[i * cpp + 0] = fmax(0.0f, fmin(255.0f, 0.299f * R + 0.587f * G + 0.114f * B));
         image[i * cpp + 1] = fmax(0.0f, fmin(255.0f, -0.14713f * R - 0.28886f * G + 0.436f * B + 128.0f));
         image[i * cpp + 2] = fmax(0.0f, fmin(255.0f, 0.615f * R - 0.51499f * G - 0.10001f * B + 128.0f));
-    }
-}
-
-void compute_luminance_histogram(unsigned char *image, int width, int height, int cpp, int *lum_hist, int offset) {
-    for (int i = 0; i < width * height; i++) {
+        
+        // compute luminance histogram
         int l = (int)roundf(image[i * cpp + offset]); 
         lum_hist[l]++;
     }
@@ -138,11 +136,8 @@ int main(int argc, char *argv[]) {
     // start timer
     double start_time = omp_get_wtime();
 
-    // 1. convert to YUV
-    RGB_to_YUV(image, width, height, cpp);
-
-    // 2. compute luminance histogram
-    compute_luminance_histogram(image, width, height, cpp, lum_hist, 0);
+    // 1. and 2. convert RGB to YUV and compute luminance histogram
+    RGB_to_YUV_compute_luminance_histogram(image, width, height, cpp, lum_hist, 0);
     
     // 3. compute cumulative histogram
     min_lum = compute_cumulative_histogram(lum_hist, cum_hist);
@@ -151,7 +146,7 @@ int main(int argc, char *argv[]) {
     // 4. calculate new pixel luminances
     compute_new_luminance(cum_hist, new_lum, width, height, min_lum);
 
-    // 5. assign new luminances to each pixel and convert back to RGB
+    // 5. and 6. assign new luminances to each pixel and convert YUV to RGB
     assign_new_lum_convert_YUV_to_RGB(image, width, height, cpp, new_lum);
 
     // stop timer
