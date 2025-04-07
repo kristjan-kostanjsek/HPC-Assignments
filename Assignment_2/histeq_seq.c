@@ -125,8 +125,8 @@ int main(int argc, char *argv[]) {
     int *cum_hist = (int *)calloc(256, sizeof(int));
     int *new_lum = (int *)calloc(256, sizeof(int));
 
-    int *R_hist = (int *)calloc(256, sizeof(int));
-    int *new_R_hist = (int *)calloc(256, sizeof(int));
+    //int *R_hist = (int *)calloc(256, sizeof(int));
+    //int *new_R_hist = (int *)calloc(256, sizeof(int));
     int min_lum = 0;
 
     // print old R histogram for plotting
@@ -166,6 +166,7 @@ int main(int argc, char *argv[]) {
     free(image);
     free(lum_hist);
     free(cum_hist);
+    free(new_lum);
 
     // Print out the ammount of time needed
     printf("Time needed: %f s\n",end_time-start_time);
