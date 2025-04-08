@@ -1,4 +1,4 @@
-// basic parallel - doesn't use partial histograms for luminance or Blelloch reduction for cumulative histogram
+// little bit more advanced parallel - uses partial histograms for luminance but doesn't use Blelloch reduction for cumulative histogram
 
 // nvcc  -diag-suppress 550 -O2 -lm histeq_par_1.cu -o histeq_par_1
 // ./histeq_par_1 in_images/720x480.png out_images/test.png
@@ -43,6 +43,53 @@ __global__ void rgb_to_yuv_histogram(unsigned char *image, int width, int height
 
     atomicAdd(&d_lum_hist[y], 1);
 }
+
+__global__ void rgb_to_yuv_histogram_optimized(unsigned char *image, int width, int height, int cpp, int *d_lum_hist) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int tid = threadIdx.x;
+    int size = width * height;
+
+    // Declare shared memory for partial histogram (local to each block)
+    __shared__ int local_hist[256];
+
+    // Initialize shared memory histogram to zero
+    if (tid < 256) {
+        local_hist[tid] = 0;
+    }
+    __syncthreads();
+
+    // Process pixels and update shared histogram
+    if (idx < size) {
+        int i = idx * cpp;
+
+        unsigned char R = image[i];
+        unsigned char G = image[i + 1];
+        unsigned char B = image[i + 2];
+
+        float Y = 0.299f * R + 0.587f * G + 0.114f * B;
+        float U = -0.14713f * R - 0.28886f * G + 0.436f * B + 128.0f;
+        float V = 0.615f * R - 0.51499f * G - 0.10001f * B + 128.0f;
+
+        unsigned char y = clamp(Y);
+        unsigned char u = clamp(U);
+        unsigned char v = clamp(V);
+
+        image[i + 0] = y;
+        image[i + 1] = u;
+        image[i + 2] = v;
+
+        // Atomic add to shared histogram
+        atomicAdd(&local_hist[y], 1);
+    }
+
+    __syncthreads();
+
+    // After local histogram is ready, a few threads combine it to global
+    if (tid < 256) {
+        atomicAdd(&d_lum_hist[tid], local_hist[tid]);
+    }
+}
+
 
 __global__ void compute_cumulative_histogram_kernel(int *lum_hist, int *cum_hist, int *min_luminance) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
@@ -150,7 +197,7 @@ int main(int argc, char *argv[]) {
     int blocksPerGrid = (numPixels + threadsPerBlock - 1) / threadsPerBlock;
 
     // 1. and 2. conversion to YUV and luminance histogram computation (simple method)
-    rgb_to_yuv_histogram<<<blocksPerGrid, threadsPerBlock>>>(d_image, width, height, cpp, d_lum_hist);
+    rgb_to_yuv_histogram_optimized<<<blocksPerGrid, threadsPerBlock>>>(d_image, width, height, cpp, d_lum_hist);
     checkCuda(cudaGetLastError(), "Kernel launch");
 
     // 3. cumulative histogram computation (simple, sequential method)
