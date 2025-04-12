@@ -133,24 +133,38 @@ int main(int argc, char *argv[]) {
     //compute_luminance_histogram(image, width, height, cpp, R_hist, 0); // to change to G or B, change offset to 1 or 2
     //util_print_hist_for_plot(R_hist); // Just for testing, can be deleted
 
-    // start timer
-    double start_time = omp_get_wtime();
+    // Timing variables
+    double start, end;
+    double hist_time, cum_time, lum_time, assign_time, total_time;
 
-    // 1. and 2. convert RGB to YUV and compute luminance histogram
+    // 1. RGB to YUV + Histogram
+    start = omp_get_wtime();
     RGB_to_YUV_compute_luminance_histogram(image, width, height, cpp, lum_hist, 0);
+    end = omp_get_wtime();
+    hist_time = (end - start) * 1000;
     
-    // 3. compute cumulative histogram
+    // 2. Cumulative Histogram
+    start = omp_get_wtime();
     min_lum = compute_cumulative_histogram(lum_hist, cum_hist);
+    end = omp_get_wtime();
+    cum_time = (end - start) * 1000;
     //util_print_histogram(cum_hist); // Just for testing, can be deleted
 
-    // 4. calculate new pixel luminances
+    // 3. New Luminance Calculation
+    start = omp_get_wtime();
     compute_new_luminance(cum_hist, new_lum, width, height, min_lum);
+    end = omp_get_wtime();
+    lum_time = (end - start) * 1000;
 
-    // 5. and 6. assign new luminances to each pixel and convert YUV to RGB
+    // 4. Assign Luminances + YUV→RGB
+    start = omp_get_wtime();
     assign_new_lum_convert_YUV_to_RGB(image, width, height, cpp, new_lum);
+    end = omp_get_wtime();
+    assign_time = (end - start) * 1000;
 
-    // stop timer
-    double end_time = omp_get_wtime();
+    // Total time
+    total_time = hist_time + cum_time + lum_time + assign_time;
+    printf("STATS, %.5f, %.5f, %.5f, %.5f, %.5f\n", hist_time, cum_time, lum_time, assign_time, total_time);
 
     // print new R histogram for plotting
     //compute_luminance_histogram(image, width, height, cpp, new_R_hist, 0);
@@ -167,9 +181,6 @@ int main(int argc, char *argv[]) {
     free(lum_hist);
     free(cum_hist);
     free(new_lum);
-
-    // Print out the ammount of time needed
-    printf("Time needed: %f s\n",end_time-start_time);
 
     return 0;
 }

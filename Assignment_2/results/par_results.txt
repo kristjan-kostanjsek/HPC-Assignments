@@ -1,0 +1,266 @@
+740x480
+
+global:
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 142.448254 ± 184.034719
+Cumulative Histogram  | .010280 ± 0
+New Luminance Calc    | .009453 ± 0
+Assign + YUV→RGB      | .013823 ± 0
+Total GPU Time        | 142.495281 ± 184.034953
+
+basic shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 185.043248 ± 191.106948
+Cumulative Histogram  | .026667 ± .002000
+New Luminance Calc    | .022369 ± .002828
+Assign + YUV→RGB      | .024637 ± .001000
+Total GPU Time        | 185.135876 ± 191.109180
+
+big shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 152.413431 ± 190.547641
+Cumulative Histogram  | .019958 ± .003000
+New Luminance Calc    | .021962 ± .002236
+Assign + YUV→RGB      | .025286 ± .001000
+Total GPU Time        | 152.499570 ± 190.550194
+
+bitmap shared
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 157.445965 ± 209.737108
+Cumulative Histogram  | .013436 ± .002449
+New Luminance Calc    | .021967 ± .002000
+Assign + YUV→RGB      | .025199 ± .001414
+Total GPU Time        | 157.525702 ± 209.738929
+
+bin shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 154.951428 ± 192.072020
+Cumulative Histogram  | .022962 ± .003000
+New Luminance Calc    | .021014 ± 0
+Assign + YUV→RGB      | .023849 ± .001732
+Total GPU Time        | 155.038125 ± 192.073766
+
+---------------------------------------------------------------
+
+1024x768
+
+global:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 153.647231 ± 214.345547
+Cumulative Histogram  | .010251 ± 0
+New Luminance Calc    | .009276 ± 0
+Assign + YUV→RGB      | .018599 ± 0
+Total GPU Time        | 153.698933 ± 214.345548
+
+basic shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 234.133749 ± 244.958219
+Cumulative Histogram  | .015405 ± .004472
+New Luminance Calc    | .021544 ± .002645
+Assign + YUV→RGB      | .028797 ± .002236
+Total GPU Time        | 234.213937 ± 244.958854
+
+big shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 189.299382 ± 234.677778
+Cumulative Histogram  | .011437 ± .002828
+New Luminance Calc    | .019002 ± .001000
+Assign + YUV→RGB      | .029467 ± .002449
+Total GPU Time        | 189.373099 ± 234.678491
+
+bitmap shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 192.546281 ± 241.369283
+Cumulative Histogram  | .010376 ± 0
+New Luminance Calc    | .011007 ± .003872
+Assign + YUV→RGB      | .028119 ± .001732
+Total GPU Time        | 192.609861 ± 241.369755
+
+bin shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 139.420169 ± 169.262162
+Cumulative Histogram  | .012377 ± .002236
+New Luminance Calc    | .021224 ± .002645
+Assign + YUV→RGB      | .028410 ± .001000
+Total GPU Time        | 139.496555 ± 169.262890
+
+---------------------------------------------------------
+
+1920x1200
+
+global:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 217.021939 ± 225.221219
+Cumulative Histogram  | .010277 ± 0
+New Luminance Calc    | .009519 ± 0
+Assign + YUV→RGB      | .040146 ± 0
+Total GPU Time        | 217.095465 ± 225.221152
+
+basic shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 162.544774 ± 222.807872
+Cumulative Histogram  | .010288 ± 0
+New Luminance Calc    | .009465 ± 0
+Assign + YUV→RGB      | .040661 ± .001414
+Total GPU Time        | 162.619152 ± 222.808582
+
+big shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 257.587370 ± 258.184410
+Cumulative Histogram  | .010330 ± 0
+New Luminance Calc    | .009486 ± 0
+Assign + YUV→RGB      | .040340 ± .001000
+Total GPU Time        | 257.661076 ± 258.184418
+
+bitmap shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 169.234057 ± 237.485713
+Cumulative Histogram  | .010293 ± 0
+New Luminance Calc    | .009535 ± 0
+Assign + YUV→RGB      | .040221 ± 0
+Total GPU Time        | 169.307705 ± 237.485705
+
+bin shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 201.098271 ± 236.173391
+Cumulative Histogram  | .010290 ± 0
+New Luminance Calc    | .009470 ± 0
+Assign + YUV→RGB      | .040374 ± .001000
+Total GPU Time        | 201.171957 ± 236.173504
+
+-----------------------------------------------------
+
+3840x2160
+
+global:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 185.507798 ± 204.200608
+Cumulative Histogram  | .010190 ± 0
+New Luminance Calc    | .009931 ± 0
+Assign + YUV→RGB      | .117001 ± 0
+Total GPU Time        | 185.657850 ± 204.200717
+
+basic shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 186.995536 ± 205.713090
+Cumulative Histogram  | .010164 ± 0
+New Luminance Calc    | .009866 ± 0
+Assign + YUV→RGB      | .116939 ± 0
+Total GPU Time        | 187.145351 ± 205.713515
+
+big shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 164.384012 ± 167.858545
+Cumulative Histogram  | .010194 ± 0
+New Luminance Calc    | .009929 ± 0
+Assign + YUV→RGB      | .116958 ± 0
+Total GPU Time        | 164.533946 ± 167.858826
+
+bitmap shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 150.616637 ± 181.767211
+Cumulative Histogram  | .010135 ± 0
+New Luminance Calc    | .009909 ± 0
+Assign + YUV→RGB      | .117553 ± 0
+Total GPU Time        | 150.767139 ± 181.767532
+
+bin shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 144.317600 ± 170.286576
+Cumulative Histogram  | .010156 ± 0
+New Luminance Calc    | .009902 ± 0
+Assign + YUV→RGB      | .117013 ± 0
+Total GPU Time        | 144.467548 ± 170.286940
+
+---------------------------------------------------------
+
+7680x4320
+
+global:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 181.929957 ± 179.126823
+Cumulative Histogram  | .010407 ± 0
+New Luminance Calc    | .009946 ± 0
+Assign + YUV→RGB      | .440252 ± .001732
+Total GPU Time        | 182.403480 ± 179.126574
+
+basic shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 194.935000 ± 214.663437
+Cumulative Histogram  | .010110 ± 0
+New Luminance Calc    | .009866 ± 0
+Assign + YUV→RGB      | .438902 ± .002000
+Total GPU Time        | 195.406604 ± 214.663237
+
+big shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 163.247334 ± 180.776223
+Cumulative Histogram  | .010127 ± 0
+New Luminance Calc    | .009889 ± 0
+Assign + YUV→RGB      | .439004 ± .002000
+Total GPU Time        | 163.719123 ± 180.776044
+
+bitmap shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 180.632280 ± 164.378021
+Cumulative Histogram  | .010206 ± 0
+New Luminance Calc    | .009945 ± 0
+Assign + YUV→RGB      | .438338 ± .001414
+Total GPU Time        | 181.103604 ± 164.378064
+
+bin shared:
+
+Metric,Mean ± StdDev (ms)
+--------------------------
+RGB→YUV + Histogram   | 133.267434 ± 178.752786
+Cumulative Histogram  | .010143 ± 0
+New Luminance Calc    | .009897 ± 0
+Assign + YUV→RGB      | .438591 ± .002000
+Total GPU Time        | 133.738818 ± 178.752756
