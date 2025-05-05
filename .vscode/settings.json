@@ -1,9 +1,12 @@
 {
     "files.associations": {
         "*.tmpl": "html",
+        "*.cu": "cpp",
+        "*.cuh": "cpp",
         "stb_image.h": "c",
         "stb_image_write.h": "c",
         "stdio.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "omp.h": "c"
     }
 }
