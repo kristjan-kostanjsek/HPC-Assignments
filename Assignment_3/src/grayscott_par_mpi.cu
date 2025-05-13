@@ -70,11 +70,10 @@ __global__ void gray_scott_kernel(float* U, float* V, float* U_new, float* V_new
 
 float gray_scott_mpi(float* U, float* V, int n, int steps, 
                     float dt, float du, float dv, float f, float k) {
-    int rank;//, size;
+    int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    //MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    // Check CUDA device availability
+    // Device setup
     int device_count;
     cudaGetDeviceCount(&device_count);
     if (device_count == 0) {
@@ -83,32 +82,48 @@ float gray_scott_mpi(float* U, float* V, int n, int steps,
     }
     cudaSetDevice(rank % device_count);
 
-    const int half_rows = n / 2; // 128 for n = 256
-    const int local_rows = half_rows + 1; // 129 for n = 256
-    const int offset = rank * half_rows - (rank == 1 ? 1 : 0); // 0 (rank 0) or 127 (rank 1)
-
-    // Device pointers
-    float *d_U, *d_V, *d_U_new, *d_V_new;
-    int size = n * local_rows * sizeof(float); // half of rows + 1 boundary row
+    const int half_rows = n / 2; // 128 for n=256
+    const int local_rows = half_rows + 2; // 130 for n=256 (2 ghost rows)
+    const size_t single_row_size = n * sizeof(float);
+    const size_t local_size = n * local_rows * sizeof(float);
 
     // Allocate device memory
-    cudaMalloc(&d_U, size);
-    cudaMalloc(&d_V, size);
-    cudaMalloc(&d_U_new, size);
-    cudaMalloc(&d_V_new, size);
+    float *d_U, *d_V, *d_U_new, *d_V_new;
+    cudaMalloc(&d_U, local_size);
+    cudaMalloc(&d_V, local_size);
+    cudaMalloc(&d_U_new, local_size);
+    cudaMalloc(&d_V_new, local_size);
 
-    // Offset depends on device rank
-    cudaMemcpy(d_U, U + offset, size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_V, V + offset, size, cudaMemcpyHostToDevice);
+    // Initialize device memory with proper ghost rows
+    if (rank == 0) {
+        // Rank 0 gets rows [0..half_rows-1] plus:
+        // - Ghost row 0: last row of global grid (periodic boundary)
+        // - Ghost row half_rows+1: first row of rank 1's data
+        cudaMemcpy(d_U + n, U, half_rows * single_row_size, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_V + n, V, half_rows * single_row_size, cudaMemcpyHostToDevice);
+        // Set top ghost row (global periodic boundary)
+        cudaMemcpy(d_U, U + (n-1)*n, single_row_size, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_V, V + (n-1)*n, single_row_size, cudaMemcpyHostToDevice);
+    } else {
+        // Rank 1 gets rows [half_rows..n-1] plus:
+        // - Ghost row 0: last row of rank 0's data
+        // - Ghost row half_rows+1: first row of global grid (periodic boundary)
+        cudaMemcpy(d_U + n, U + half_rows*n, half_rows * single_row_size, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_V + n, V + half_rows*n, half_rows * single_row_size, cudaMemcpyHostToDevice);
+        // Set bottom ghost row (global periodic boundary)
+        cudaMemcpy(d_U + (half_rows+1)*n, U, single_row_size, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_V + (half_rows+1)*n, V, single_row_size, cudaMemcpyHostToDevice);
+    }
 
-    float *Send_UV_0_boundary = (float*)malloc(2 * n * sizeof(float));
-    float *Recv_UV_0_boundary = (float*)malloc(2 * n * sizeof(float));
-    float *Send_UV_1_boundary = (float*)malloc(2 * n * sizeof(float));
-    float *Recv_UV_1_boundary = (float*)malloc(2 * n * sizeof(float));
+    // Allocate boundary exchange buffers
+    float *send_mid = (float*)malloc(2 * n * sizeof(float));
+    float *recv_mid = (float*)malloc(2 * n * sizeof(float));
+    float *send_global = (float*)malloc(2 * n * sizeof(float));
+    float *recv_global = (float*)malloc(2 * n * sizeof(float));
 
+    // Kernel configuration
     dim3 block(32, 32);
-    dim3 grid((n + block.x - 1)/block.x, (half_rows + block.y - 1)/block.y);
-    size_t sharedMemSize = (block.x + 2) * (block.y + 2) * 2 * sizeof(float);
+    dim3 grid((n + block.x - 1)/block.x, (local_rows + block.y - 1)/block.y);
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
@@ -116,109 +131,88 @@ float gray_scott_mpi(float* U, float* V, int n, int steps,
     cudaEventRecord(start);
 
     for (int step = 0; step < steps; step++) {
-        gray_scott_kernel<<<grid, block, sharedMemSize>>>(d_U, d_V, d_U_new, d_V_new, n, local_rows, dt, du, dv, f, k);
+        gray_scott_kernel<<<grid, block>>>(d_U, d_V, d_U_new, d_V_new, 
+                                         n, local_rows, dt, du, dv, f, k);
         cudaDeviceSynchronize();
 
-        // Prepare boundary data with error checking
+        // Prepare boundary data
         if (rank == 0) {
-            // copy last row of U and V to send
-            cudaMemcpy(Send_UV_0_boundary, d_U_new + (half_rows-1)*n, n*sizeof(float), cudaMemcpyDeviceToHost);
-            cudaMemcpy(Send_UV_0_boundary + n, d_V_new + (half_rows-1)*n, n*sizeof(float), cudaMemcpyDeviceToHost);
+            // Mid-boundary: send last real row to rank 1
+            cudaMemcpy(send_mid, d_U_new + half_rows*n, single_row_size, cudaMemcpyDeviceToHost);
+            cudaMemcpy(send_mid + n, d_V_new + half_rows*n, single_row_size, cudaMemcpyDeviceToHost);
+            // Global boundary: send first real row to rank 1's bottom ghost
+            cudaMemcpy(send_global, d_U_new + n, single_row_size, cudaMemcpyDeviceToHost);
+            cudaMemcpy(send_global + n, d_V_new + n, single_row_size, cudaMemcpyDeviceToHost);
         } else {
-            // copy first row of U and V to send, GPU always reads from U/V and writes to U_new/V_new
-            cudaMemcpy(Send_UV_1_boundary, d_U_new + n, n*sizeof(float), cudaMemcpyDeviceToHost);
-            cudaMemcpy(Send_UV_1_boundary + n, d_V_new + n, n*sizeof(float), cudaMemcpyDeviceToHost);
+            // Mid-boundary: send first real row to rank 0
+            cudaMemcpy(send_mid, d_U_new + n, single_row_size, cudaMemcpyDeviceToHost);
+            cudaMemcpy(send_mid + n, d_V_new + n, single_row_size, cudaMemcpyDeviceToHost);
+            // Global boundary: send last real row to rank 0's top ghost
+            cudaMemcpy(send_global, d_U_new + half_rows*n, single_row_size, cudaMemcpyDeviceToHost);
+            cudaMemcpy(send_global + n, d_V_new + half_rows*n, single_row_size, cudaMemcpyDeviceToHost);
         }
-        cudaDeviceSynchronize(); // this might be wrong position for synchronization
+        cudaDeviceSynchronize();
 
-        // Exchange boundaries - TODO FIX
+        // Exchange boundaries (use different tags)
+        MPI_Sendrecv(send_mid, 2*n, MPI_FLOAT, 1-rank, 100,
+                    recv_mid, 2*n, MPI_FLOAT, 1-rank, 100,
+                    MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+        MPI_Sendrecv(send_global, 2*n, MPI_FLOAT, 1-rank, 200,
+                    recv_global, 2*n, MPI_FLOAT, 1-rank, 200,
+                    MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+        // Apply received boundaries
         if (rank == 0) {
-            // Send to rank 1, receive from rank 1
-            // send Send_UV_0_boundary to Recv_UV_1_boundary
-            // receive Send_UV_1_boundary into Recv_UV_0_boundary
-            MPI_Sendrecv(Send_UV_0_boundary, 2 * n, MPI_FLOAT, 1, 100,
-                        Recv_UV_0_boundary, 2 * n, MPI_FLOAT, 1, 100,
-                        MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        } else if (rank == 1) {
-            // Send to rank 0, receive from rank 0
-            // receive Send_UV_0_boundary into Recv_UV_1_boundary
-            // send Send_UV_1_boundary to Recv_UV_0_boundary
-            MPI_Sendrecv(Send_UV_1_boundary, 2 * n, MPI_FLOAT, 0, 100,
-                        Recv_UV_1_boundary, 2 * n, MPI_FLOAT, 0, 100,
-                        MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        }
-
-
-        // Copy exchanged row data to devices 0 and 1
-        if (rank == 0) {
-            // send second row of device 1 to last row of device 0
-            cudaMemcpy(d_U_new + half_rows*n, Recv_UV_0_boundary, n*sizeof(float), cudaMemcpyHostToDevice);
-            cudaMemcpy(d_V_new + half_rows*n, Recv_UV_0_boundary + n, n*sizeof(float), cudaMemcpyHostToDevice);
+            // Mid-boundary goes to bottom ghost row
+            cudaMemcpy(d_U_new + (half_rows+1)*n, recv_mid, single_row_size, cudaMemcpyHostToDevice);
+            cudaMemcpy(d_V_new + (half_rows+1)*n, recv_mid + n, single_row_size, cudaMemcpyHostToDevice);
+            // Global boundary goes to top ghost row
+            cudaMemcpy(d_U_new, recv_global, single_row_size, cudaMemcpyHostToDevice);
+            cudaMemcpy(d_V_new, recv_global + n, single_row_size, cudaMemcpyHostToDevice);
         } else {
-            // copy second to last row of device 0 to first row of device 1
-            cudaMemcpy(d_U_new, Recv_UV_1_boundary, n*sizeof(float), cudaMemcpyHostToDevice);
-            cudaMemcpy(d_V_new, Recv_UV_1_boundary + n, n*sizeof(float), cudaMemcpyHostToDevice);
+            // Mid-boundary goes to top ghost row
+            cudaMemcpy(d_U_new, recv_mid, single_row_size, cudaMemcpyHostToDevice);
+            cudaMemcpy(d_V_new, recv_mid + n, single_row_size, cudaMemcpyHostToDevice);
+            // Global boundary goes to bottom ghost row
+            cudaMemcpy(d_U_new + (half_rows+1)*n, recv_global, single_row_size, cudaMemcpyHostToDevice);
+            cudaMemcpy(d_V_new + (half_rows+1)*n, recv_global + n, single_row_size, cudaMemcpyHostToDevice);
         }
-        cudaDeviceSynchronize(); // this might be wrong position for synchronization
+        cudaDeviceSynchronize();
 
-        // Swap pointers (on device)
-        // GPU always reads from U/V and writes to U_new/V_new, so we need to swap U/V and U_new/V_new
-        float* tmp;
-
-        tmp    = d_U;
-        d_U    = d_U_new;
-        d_U_new= tmp;
-
-        tmp    = d_V;
-        d_V    = d_V_new;
-        d_V_new= tmp;
+        // Swap pointers
+        float* tmp = d_U; d_U = d_U_new; d_U_new = tmp;
+        tmp = d_V; d_V = d_V_new; d_V_new = tmp;
     }
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
     
-    // Copy back results (excluding boundary rows)
+    // Copy back results (excluding ghost rows)
     if (rank == 0) {
-        // skip last row (boundary) of d_U on device 0 when copying back
-        cudaMemcpy(U, d_U, half_rows * n * sizeof(float), cudaMemcpyDeviceToHost);
-        cudaMemcpy(V, d_V, half_rows * n * sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(U, d_U + n, half_rows * single_row_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(V, d_V + n, half_rows * single_row_size, cudaMemcpyDeviceToHost);
     } else {
-        // skip first row (boundary) of d_U on device 1 when copying back
-        cudaMemcpy(U + half_rows*n, d_U + n, half_rows * n * sizeof(float), cudaMemcpyDeviceToHost);
-        cudaMemcpy(V + half_rows*n, d_V + n, half_rows * n * sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(U + half_rows*n, d_U + n, half_rows * single_row_size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(V + half_rows*n, d_V + n, half_rows * single_row_size, cudaMemcpyDeviceToHost);
     }
 
-    // at this point device 0 has the correct first half of U and V, 
-    // while device 1 has the correct second half of U and V
-    // we need to send second half to device 0
-
-    if (rank == 0) {
-        // Gather on device 0
-        MPI_Recv(U + half_rows*n, half_rows * n, MPI_FLOAT, 1, 200, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(V + half_rows*n, half_rows * n, MPI_FLOAT, 1, 200, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    } else if (rank == 1) {
-        MPI_Send(U + half_rows*n, half_rows * n, MPI_FLOAT, 0, 200, MPI_COMM_WORLD);
-        MPI_Send(V + half_rows*n, half_rows * n, MPI_FLOAT, 0, 200, MPI_COMM_WORLD);
+    // Gather final results on rank 0
+    if (rank == 1) {
+        MPI_Send(U + half_rows*n, half_rows * n, MPI_FLOAT, 0, 300, MPI_COMM_WORLD);
+        MPI_Send(V + half_rows*n, half_rows * n, MPI_FLOAT, 0, 300, MPI_COMM_WORLD);
+    } else if (rank == 0) {
+        MPI_Recv(U + half_rows*n, half_rows * n, MPI_FLOAT, 1, 300, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(V + half_rows*n, half_rows * n, MPI_FLOAT, 1, 300, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
-
-    // at this point device 0 has the correct U and V
 
     // Cleanup
-    cudaFree(d_U);
-    cudaFree(d_V);
-    cudaFree(d_U_new);
-    cudaFree(d_V_new);
-
-    // Free host memory
-    free(Send_UV_0_boundary);
-    free(Send_UV_1_boundary);
-    free(Recv_UV_0_boundary);
-    free(Recv_UV_1_boundary);
+    cudaFree(d_U); cudaFree(d_V); cudaFree(d_U_new); cudaFree(d_V_new);
+    free(send_mid); free(recv_mid); free(send_global); free(recv_global);
 
     float milliseconds;
     cudaEventElapsedTime(&milliseconds, start, stop);
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+    cudaEventDestroy(start); cudaEventDestroy(stop);
     return milliseconds;
 }
 

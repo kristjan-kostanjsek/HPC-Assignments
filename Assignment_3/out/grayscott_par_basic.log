@@ -1,4 +1,48 @@
 nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
-Kernel Execution time is: 7.350 seconds 
-Kernel Execution time is: 6.899 seconds 
-Kernel Execution time is: 6.898 seconds 
+8192
+Kernel Execution time is: 8.416 seconds 
+Kernel Execution time is: 7.876 seconds 
+Kernel Execution time is: 7.041 seconds 
+Kernel Execution time is: 7.822 seconds 
+Kernel Execution time is: 7.399 seconds 
+Kernel Execution time is: 7.815 seconds 
+Kernel Execution time is: 7.175 seconds 
+Kernel Execution time is: 7.023 seconds 
+Kernel Execution time is: 7.183 seconds 
+Kernel Execution time is: 7.147 seconds 
+Kernel Execution time is: 7.913 seconds 
+16384
+Kernel Execution time is: 25.638 seconds 
+Kernel Execution time is: 25.872 seconds 
+Kernel Execution time is: 25.677 seconds 
+Kernel Execution time is: 26.593 seconds 
+Kernel Execution time is: 25.986 seconds 
+Kernel Execution time is: 25.607 seconds 
+Kernel Execution time is: 26.299 seconds 
+Kernel Execution time is: 26.304 seconds 
+Kernel Execution time is: 26.534 seconds 
+Kernel Execution time is: 26.051 seconds 
+Kernel Execution time is: 26.265 seconds 
+32768
+srun: error: wn212: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom_kill event in StepId=57723924.22. Some of the step tasks have been OOM Killed.
+srun: error: wn212: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom_kill event in StepId=57723924.23. Some of the step tasks have been OOM Killed.
+srun: error: wn212: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom_kill event in StepId=57723924.24. Some of the step tasks have been OOM Killed.
+srun: error: wn212: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom_kill event in StepId=57723924.25. Some of the step tasks have been OOM Killed.
+srun: error: wn212: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom_kill event in StepId=57723924.26. Some of the step tasks have been OOM Killed.
+srun: error: wn212: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom_kill event in StepId=57723924.27. Some of the step tasks have been OOM Killed.
+srun: error: wn212: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom_kill event in StepId=57723924.28. Some of the step tasks have been OOM Killed.
+srun: error: wn212: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom_kill event in StepId=57723924.29. Some of the step tasks have been OOM Killed.
+srun: error: wn212: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom_kill event in StepId=57723924.30. Some of the step tasks have been OOM Killed.
+srun: error: wn212: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom_kill event in StepId=57723924.31. Some of the step tasks have been OOM Killed.
+srun: error: wn212: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom_kill event in StepId=57723924.32. Some of the step tasks have been OOM Killed.

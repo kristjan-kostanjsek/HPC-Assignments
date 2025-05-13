@@ -1,4 +1,37 @@
 make: 'exe/grayscott_par_mpi' is up to date.
-Execution time: 4.290 seconds
-Execution time: 4.414 seconds
-Execution time: 4.458 seconds
+8196
+Execution time: 4.627 seconds
+Execution time: 5.342 seconds
+Execution time: 4.560 seconds
+Execution time: 4.494 seconds
+Execution time: 4.775 seconds
+Execution time: 4.470 seconds
+Execution time: 4.614 seconds
+Execution time: 4.632 seconds
+Execution time: 4.913 seconds
+Execution time: 4.481 seconds
+Execution time: 4.606 seconds
+16384
+Execution time: 14.309 seconds
+Execution time: 14.391 seconds
+Execution time: 14.508 seconds
+Execution time: 14.417 seconds
+Execution time: 14.422 seconds
+Execution time: 14.407 seconds
+Execution time: 14.589 seconds
+Execution time: 14.309 seconds
+Execution time: 14.495 seconds
+Execution time: 14.355 seconds
+Execution time: 14.348 seconds
+32768
+Execution time: 63.501 seconds
+Execution time: 64.347 seconds
+Execution time: 63.426 seconds
+Execution time: 63.527 seconds
+Execution time: 63.466 seconds
+Execution time: 63.447 seconds
+Execution time: 63.636 seconds
+Execution time: 63.416 seconds
+Execution time: 63.464 seconds
+Execution time: 63.674 seconds
+Execution time: 63.509 seconds

@@ -25,10 +25,6 @@ module load CUDA
 #BUILD
 make
 
-mpirun -np 2 ./exe/grayscott_par_mpi 8192 5000 1 0.16 0.08 0.060 0.062
-mpirun -np 2 ./exe/grayscott_par_mpi 8192 5000 1 0.16 0.08 0.060 0.062
-mpirun -np 2 ./exe/grayscott_par_mpi 8192 5000 1 0.16 0.08 0.060 0.062
-
 #RUN
 #echo "256"
 #for ((run=1; run<=NUM_RUNS; run++)); do
@@ -55,3 +51,17 @@ mpirun -np 2 ./exe/grayscott_par_mpi 8192 5000 1 0.16 0.08 0.060 0.062
 #    mpirun -np 2 ./exe/grayscott_par_mpi 4096 5000 1 0.16 0.08 0.060 0.062
 #done
 
+echo "8196"
+for ((run=1; run<=NUM_RUNS; run++)); do
+    mpirun -np 2 ./exe/grayscott_par_mpi 8196 5000 1 0.16 0.08 0.060 0.062
+done
+
+echo "16384"
+for ((run=1; run<=NUM_RUNS; run++)); do
+    mpirun -np 2 ./exe/grayscott_par_mpi 16384 5000 1 0.16 0.08 0.060 0.062
+done
+
+echo "32768"
+for ((run=1; run<=NUM_RUNS; run++)); do
+    mpirun -np 2 ./exe/grayscott_par_mpi 32768 5000 1 0.16 0.08 0.060 0.062
+done
