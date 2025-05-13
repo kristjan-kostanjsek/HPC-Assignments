@@ -9,6 +9,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+#define STORE_VIDEO 0 // 1 = TRUE, 0 = FALSE
+
 // initialize U and V grids (2D) with a square in the middle
 void initUV(float *U, float *V, int n) {
     for (int i = 0; i < n; i++) {
@@ -54,6 +56,13 @@ float calc_laplacian(float* data, int n, int i, int j) {
 // here is where the magic happens, baby
 void gray_scott(float* U, float* V, float* U_new, float* V_new, int n, int steps, float dt, float du, float dv, float f, float k) {
     for (int cur_step = 0; cur_step < steps; cur_step ++) {
+        // store current image V for video
+        if (STORE_VIDEO == 1 & cur_step%2==0) {
+            char filename[64];
+            snprintf(filename, sizeof(filename), "vid/%d.png", cur_step);
+            save_grayscale_image(filename, V, n);
+        }
+
         // for each grid cell do, what must be done...
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
