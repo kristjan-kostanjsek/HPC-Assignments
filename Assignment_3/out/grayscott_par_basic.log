@@ -1,0 +1,4 @@
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+Kernel Execution time is: 7.350 seconds 
+Kernel Execution time is: 6.899 seconds 
+Kernel Execution time is: 6.898 seconds 

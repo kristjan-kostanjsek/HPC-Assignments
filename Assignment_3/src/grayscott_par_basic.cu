@@ -80,7 +80,7 @@ float gray_scott(float* U, float* V, float* U_new, float* V_new, int n, int step
     cudaMemcpy(d_V, V, size, cudaMemcpyHostToDevice);
 
     // Define grid and block dimensions
-    dim3 blockSize(16, 16);
+    dim3 blockSize(32, 32);
     dim3 gridSize((n + blockSize.x - 1) / blockSize.x, (n + blockSize.y - 1) / blockSize.y);
 
     // Use CUDA events to measure execution time
