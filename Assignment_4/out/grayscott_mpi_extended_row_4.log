@@ -1,0 +1,7 @@
+Running Gray-Scott MPI reduced exchanges simulation on 4 tasks
+Compiling Gray-Scott MPI program...
+Elapsed time: 3.634993 seconds
+Elapsed time: 12.147731 seconds
+Elapsed time: 46.481385 seconds
+Elapsed time: 183.064083 seconds
+slurmstepd: error: *** JOB 58098047 ON wn140 CANCELLED AT 2025-05-31T15:27:54 ***
